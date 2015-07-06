@@ -4,6 +4,10 @@ android {
     compileSdkVersion 22
     buildToolsVersion "22.0.1"
 
+    repositories {
+        mavenCentral()
+    }
+
     defaultConfig {
         applicationId "ca.shahnewazkhan.locator"
         minSdkVersion 16
@@ -19,12 +23,10 @@ android {
     }
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
     compile 'com.android.support:appcompat-v7:22.2.0'
     compile 'com.facebook.android:facebook-android-sdk:4.1.0'
+    compile 'com.android.support:cardview-v7:21.0.0-rc1'
+    compile 'com.android.support:recyclerview-v7:21.0.0-rc1'
 }
