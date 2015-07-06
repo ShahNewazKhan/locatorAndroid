@@ -31,6 +31,7 @@ import com.facebook.login.widget.ProfilePictureView;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -121,7 +122,7 @@ public class MainActivity extends AppCompatActivity {
         // onPostExecute displays the results of the AsyncTask.
         @Override
         protected void onPostExecute(String result) {
-
+            Toast.makeText(context, "POSTED!", Toast.LENGTH_SHORT).show();
 //            LocalAdAdapter laa = new LocalAdAdapter(createList(result));
 //            if(recList != null){
 //
@@ -135,19 +136,48 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public static String POST(String url){
+    public String POST(String url){
         InputStream inputStream = null;
         String result = "";
         try {
             HttpClient httpclient = new DefaultHttpClient();
-            HttpResponse httpResponse = httpclient.execute(new HttpPost(url));
-            inputStream = httpResponse.getEntity().getContent();
+            HttpPost httpPost = new HttpPost(url);
 
+            String json = "";
+
+            Profile currentProfile = Profile.getCurrentProfile();
+
+            GPSTracker gps = new GPSTracker(context);
+            double latitude = gps.getLatitude();
+            double longitude = gps.getLongitude();
+
+            if(gps.canGetLocation()) {
+                latitude = gps.getLatitude();
+                longitude = gps.getLongitude();
+            } else {
+                gps.showSettingsAlert();
+            }
+
+            JSONObject jsonObject = new JSONObject();
+            jsonObject.accumulate("name", currentProfile.getName());
+            jsonObject.accumulate("fb_id", currentProfile.getId());
+            jsonObject.accumulate("lat", String.valueOf(latitude));
+            jsonObject.accumulate("lon", String.valueOf(longitude));
+
+            json = jsonObject.toString();
+
+            StringEntity se = new StringEntity(json);
+            httpPost.setEntity(se);
+
+            httpPost.setHeader("Accept", "application/json");
+            httpPost.setHeader("Content-type", "application/json");
+            HttpResponse httpResponse = httpclient.execute(httpPost);
+            inputStream = httpResponse.getEntity().getContent();
             if(inputStream != null)
                 result = convertInputStreamToString(inputStream);
-            else {
+            else
                 result = "Did not work!";
-            }
+
         } catch (Exception e) {
             Log.d("InputStream", e.getLocalizedMessage());
         }
