@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.AsyncTask;
+import android.preference.PreferenceActivity;
 import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
@@ -33,7 +34,10 @@ import com.google.android.gms.common.api.GoogleApiClient;
 import com.google.android.gms.location.LocationListener;
 import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.AsyncHttpResponseHandler;
 
+import org.apache.http.Header;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpPost;
@@ -46,12 +50,19 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.text.DateFormat;
 import java.util.Date;
 
 
-public class MainActivity extends AppCompatActivity implements
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
+public class MainActivity
+        extends
+        AppCompatActivity
+        implements
+        GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener,
+        LocationListener {
 
     private static final String TAG = "LOCATOR-APP";
 
@@ -69,6 +80,7 @@ public class MainActivity extends AppCompatActivity implements
     private Location mCurrentLocation;
     private Boolean mRequestingLocationUpdates;
     private String mLastUpdateTime;
+    private String mongoID;
 
     private CallbackManager mCallbackManager;
     private Context context;
@@ -110,7 +122,6 @@ public class MainActivity extends AppCompatActivity implements
                 if(newToken == null){
                     logOut();
                 }
-
             }
         };
 
@@ -125,9 +136,7 @@ public class MainActivity extends AppCompatActivity implements
             if (savedInstanceState.keySet().contains(REQUESTING_LOCATION_UPDATES_KEY)) {
                 mRequestingLocationUpdates = savedInstanceState.getBoolean(
                         REQUESTING_LOCATION_UPDATES_KEY);
-                //setButtonsEnabledState();
             }
-
             if (savedInstanceState.keySet().contains(LOCATION_KEY)) {
                 mCurrentLocation = savedInstanceState.getParcelable(LOCATION_KEY);
             }
@@ -135,7 +144,6 @@ public class MainActivity extends AppCompatActivity implements
             if (savedInstanceState.keySet().contains(LAST_UPDATED_TIME_STRING_KEY)) {
                 mLastUpdateTime = savedInstanceState.getString(LAST_UPDATED_TIME_STRING_KEY);
             }
-            //updateUI();
         }
     }
 
@@ -205,9 +213,7 @@ public class MainActivity extends AppCompatActivity implements
         super.onStop();
     }
 
-    /**
-     * Runs when a GoogleApiClient object successfully connects.
-     */
+
     @Override
     public void onConnected(Bundle connectionHint) {
         Log.i(TAG, "Connected to GoogleApiClient");
@@ -215,39 +221,29 @@ public class MainActivity extends AppCompatActivity implements
         if (mCurrentLocation == null) {
             mCurrentLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
             mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-            //updateUI();
         }
-
 
         if (mRequestingLocationUpdates) {
             startLocationUpdates();
         }
     }
 
-    /**
-     * Callback that fires when the location changes.
-     */
     @Override
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        //updateUI();
         Toast.makeText(this, "Location Updated",
                 Toast.LENGTH_SHORT).show();
     }
 
     @Override
     public void onConnectionSuspended(int cause) {
-        // The connection to Google Play services was lost for some reason. We call connect() to
-        // attempt to re-establish the connection.
         Log.i(TAG, "Connection suspended");
         mGoogleApiClient.connect();
     }
 
     @Override
     public void onConnectionFailed(ConnectionResult result) {
-        // Refer to the javadoc for ConnectionResult to see what error codes might be returned in
-        // onConnectionFailed.
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + result.getErrorCode());
     }
 
@@ -259,8 +255,22 @@ public class MainActivity extends AppCompatActivity implements
     }
 
     private void logOut(){
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.delete(locatorApi + mongoID, new AsyncHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+
+            }
+            @Override
+            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable
+                    error)
+            {
+                error.printStackTrace(System.out);
+            }
+        });
 
         profilePictureView.setProfileId("");
+
         LoginManager.getInstance().logOut();
     }
 
@@ -287,7 +297,6 @@ public class MainActivity extends AppCompatActivity implements
 //            }
         }
         @Override public void onCancel() {}
-
         @Override public void onError(FacebookException e) {}
     };
 
@@ -300,7 +309,14 @@ public class MainActivity extends AppCompatActivity implements
         // onPostExecute displays the results of the AsyncTask.
         @Override
         protected void onPostExecute(String result) {
-            Toast.makeText(context, "POSTED!", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Posted to API", Toast.LENGTH_SHORT).show();
+
+            try{
+                JSONObject json = new JSONObject(result);
+                mongoID = json.getString("_id");
+
+            }catch(Exception e){e.printStackTrace();}
+
 //            LocalAdAdapter laa = new LocalAdAdapter(createList(result));
 //            if(recList != null){
 //
