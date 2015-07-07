@@ -56,7 +56,7 @@ public class MainActivity
 
     private static final String TAG = "LOCATOR-APP";
 
-    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 10000;
+    public static final long UPDATE_INTERVAL_IN_MILLISECONDS = 1000;
     public static final long FASTEST_UPDATE_INTERVAL_IN_MILLISECONDS =
             UPDATE_INTERVAL_IN_MILLISECONDS / 2;
 
@@ -320,11 +320,13 @@ public class MainActivity
 
                 JSONObject jsonObj = (JSONObject) res.get(i);
 
+                //Current user loged into app
+                if( mongoID != null && mongoID.equals(jsonObj.getString("_id")))
+                    continue;
 
                 UserCardInfo uci = new UserCardInfo();
                 uci.name = (String) jsonObj.get("name");
                 uci.fb_id = String.valueOf(jsonObj.get("fb_id"));
-
                 uci.distance = getDistance(jsonObj.getDouble("lat"), jsonObj.getDouble("lon"));
 
                 users.add(uci);
