@@ -388,6 +388,16 @@ public class MainActivity
         });
         //Remove user profile pic
         profilePictureView.setProfileId("");
+
+        //Clear cards
+        UserAdapter userAdapter = new UserAdapter(new ArrayList());
+        if(recList != null){
+            Log.d(TAG, "Clearing Cards");
+            recList.setAdapter(userAdapter);
+            userAdapter.notifyDataSetChanged();
+        } else {
+            Log.d(TAG, "recList is NULL");
+        }
         //Logout user
         LoginManager.getInstance().logOut();
     }
