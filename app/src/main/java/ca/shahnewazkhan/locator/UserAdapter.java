@@ -31,8 +31,8 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
     public void onBindViewHolder(UserViewHolder userViewHolder, int i) {
         UserCardInfo uci = userList.get(i);
         userViewHolder.vName.setText(uci.name);
-        userViewHolder.vDistance.setText(uci.distance);
-        //userViewHolder.vProfilePic.setProfileId(uci.fb_id);
+        userViewHolder.vDistance.setText(uci.distance + " m");
+        userViewHolder.vProfilePic.setProfileId(uci.fb_id);
     }
 
     @Override
@@ -56,7 +56,7 @@ public class UserAdapter extends RecyclerView.Adapter<UserAdapter.UserViewHolder
 
             vName = (TextView) v.findViewById(R.id.tv_userName);
             vDistance = (TextView) v.findViewById(R.id.tv_distance);
-            //vProfilePic = (ProfilePictureView) v.findViewById(R.id.ppv_profilePic);
+            vProfilePic = (ProfilePictureView) v.findViewById(R.id.ppv_profilePic);
         }
     }
 }

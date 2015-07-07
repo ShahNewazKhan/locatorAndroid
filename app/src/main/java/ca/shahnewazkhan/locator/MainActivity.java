@@ -3,16 +3,11 @@ package ca.shahnewazkhan.locator;
 import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
-import android.os.AsyncTask;
-import android.preference.PreferenceActivity;
-import android.support.v7.app.ActionBarActivity;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
 import android.widget.Toast;
 
 import com.facebook.AccessToken;
@@ -21,9 +16,6 @@ import com.facebook.CallbackManager;
 import com.facebook.FacebookCallback;
 import com.facebook.FacebookException;
 import com.facebook.FacebookSdk;
-import com.facebook.GraphRequest;
-import com.facebook.GraphResponse;
-import com.facebook.HttpMethod;
 import com.facebook.Profile;
 import com.facebook.login.LoginManager;
 import com.facebook.login.LoginResult;
@@ -36,24 +28,22 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationServices;
 import com.loopj.android.http.AsyncHttpClient;
 import com.loopj.android.http.AsyncHttpResponseHandler;
+import com.loopj.android.http.JsonHttpResponseHandler;
+import com.loopj.android.http.RequestParams;
 
 import org.apache.http.Header;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpPost;
-import org.apache.http.entity.StringEntity;
-import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
+
 import java.text.DateFormat;
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
+import java.util.List;
 
 
 public class MainActivity
@@ -88,7 +78,6 @@ public class MainActivity
     private RecyclerView recList;
     private Profile profile;
     private String locatorApi = "http://107.170.234.15:3000/api/users/";
-
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -186,10 +175,6 @@ public class MainActivity
     @Override
     public void onResume() {
         super.onResume();
-        // Within {@code onPause()}, we pause location updates, but leave the
-        // connection to GoogleApiClient intact.  Here, we resume receiving
-        // location updates if the user has requested them.
-
         if (mGoogleApiClient.isConnected() && mRequestingLocationUpdates) {
             startLocationUpdates();
         }
@@ -198,7 +183,6 @@ public class MainActivity
     @Override
     protected void onPause() {
         super.onPause();
-        // Stop location updates to save battery, but don't disconnect the GoogleApiClient object.
         if (mGoogleApiClient.isConnected()) {
             stopLocationUpdates();
         }
@@ -254,27 +238,9 @@ public class MainActivity
         super.onSaveInstanceState(savedInstanceState);
     }
 
-    private void logOut(){
-        AsyncHttpClient client = new AsyncHttpClient();
-        client.delete(locatorApi + mongoID, new AsyncHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
-
-            }
-            @Override
-            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable
-                    error)
-            {
-                error.printStackTrace(System.out);
-            }
-        });
-
-        profilePictureView.setProfileId("");
-
-        LoginManager.getInstance().logOut();
-    }
-
-    private FacebookCallback<LoginResult> mCallback= new FacebookCallback<LoginResult>() {
+    //After successful facebook login Store user fb id, name & location to api & load cards with
+    //current users logged in from api
+    private FacebookCallback<LoginResult> mCallback= new FacebookCallback<LoginResult>(){
         @Override
         public void onSuccess(LoginResult loginResult) {
 
@@ -283,103 +249,145 @@ public class MainActivity
             if(profile != null){
 
                 profilePictureView.setProfileId(profile.getId());
-                new HttpPostAsync().execute(locatorApi);
-            }
 
-//            UserAdapter ua = new UserAdapter(createList(result));
-//            if(recList != null){
-//
-//                recList.setAdapter(ua);
-//                ua.notifyDataSetChanged();
-//
-//            } else {
-//                Log.d("Local", "recList is NULL");
-//            }
+                //Prepare params for api post call
+                RequestParams params = new RequestParams();
+                params.put("name", profile.getName());
+                params.put("fb_id", profile.getId());
+                params.put("lat", mCurrentLocation.getLatitude());
+                params.put("lon", mCurrentLocation.getLongitude());
+
+                //Post to api
+                postNewUser(params);
+
+                //Populate user cards
+                populateCards();
+
+            }
         }
         @Override public void onCancel() {}
         @Override public void onError(FacebookException e) {}
     };
 
-    private class HttpPostAsync extends AsyncTask<String, Void, String> {
-        @Override
-        protected String doInBackground(String... urls) {
+    //Post user data (fb id, name & location) to api
+    private void postNewUser(RequestParams params){
+        LocatorRestClient.post("", params, new JsonHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
+                //Get mongo id from response
+                try {
+                    mongoID = response.getString("_id");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
 
-            return POST(urls[0]);
-        }
-        // onPostExecute displays the results of the AsyncTask.
-        @Override
-        protected void onPostExecute(String result) {
-            Toast.makeText(context, "Posted to API", Toast.LENGTH_SHORT).show();
-
-            try{
-                JSONObject json = new JSONObject(result);
-                mongoID = json.getString("_id");
-
-            }catch(Exception e){e.printStackTrace();}
-
-//            LocalAdAdapter laa = new LocalAdAdapter(createList(result));
-//            if(recList != null){
-//
-//                recList.setAdapter(laa);
-//                laa.notifyDataSetChanged();
-//                mSwipeRefreshLayout.setRefreshing(false);
-//
-//            } else {
-//                Log.d("Local", "recList is NULL");
-//            }
-        }
+            }
+        });
     }
 
-    public String POST(String url){
-        InputStream inputStream = null;
-        String result = "";
-        try {
-            HttpClient httpclient = new DefaultHttpClient();
-            HttpPost httpPost = new HttpPost(url);
+    private void populateCards(){
 
-            String json = "";
+        Log.d("GETTING", "USERS");
 
-            Profile currentProfile = Profile.getCurrentProfile();
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.get(locatorApi, new AsyncHttpResponseHandler() {
 
-            JSONObject jsonObject = new JSONObject();
-            jsonObject.accumulate("name", currentProfile.getName());
-            jsonObject.accumulate("fb_id", currentProfile.getId());
-            if(mCurrentLocation != null){
-                jsonObject.accumulate("lat", String.valueOf(mCurrentLocation.getLatitude()));
-                jsonObject.accumulate("lon", String.valueOf(mCurrentLocation.getLongitude()));
+
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                try {
+                    JSONArray res = new JSONArray(new String(response));
+                    updateUI(res);
+
+                } catch (Exception e) {
+                }
+
             }
 
+            @Override
+            public void onFailure(int sc, Header[] h, byte[] errorRes, Throwable e) {
+            }
+        });
 
-            json = jsonObject.toString();
-
-            StringEntity se = new StringEntity(json);
-            httpPost.setEntity(se);
-
-            httpPost.setHeader("Accept", "application/json");
-            httpPost.setHeader("Content-type", "application/json");
-            HttpResponse httpResponse = httpclient.execute(httpPost);
-            inputStream = httpResponse.getEntity().getContent();
-            if(inputStream != null)
-                result = convertInputStreamToString(inputStream);
-            else
-                result = "Did not work!";
-
-        } catch (Exception e) {
-            Log.d("InputStream", e.getLocalizedMessage());
-        }
-        return result;
     }
 
-    private static String convertInputStreamToString(InputStream inputStream) throws IOException {
-        BufferedReader bufferedReader = new BufferedReader( new InputStreamReader(inputStream));
-        String line = "";
-        String result = "";
-        while((line = bufferedReader.readLine()) != null)
-            result += line;
+    private void updateUI(JSONArray res){
 
-        inputStream.close();
-        return result;
+        List users = new ArrayList();
 
+        try{
+            for (int i = 0; i < res.length(); i++) {
+
+                JSONObject jsonObj = (JSONObject) res.get(i);
+
+
+                UserCardInfo uci = new UserCardInfo();
+                uci.name = (String) jsonObj.get("name");
+                uci.fb_id = String.valueOf(jsonObj.get("fb_id"));
+
+                uci.distance = getDistance(jsonObj.getDouble("lat"), jsonObj.getDouble("lon"));
+
+                users.add(uci);
+            }
+
+            Collections.sort(users, compDistance());
+
+        }catch(Exception e){ e.printStackTrace();}
+
+
+        UserAdapter userAdapter = new UserAdapter(users);
+        if(recList != null){
+            Log.d(TAG, "Updating UI");
+            recList.setAdapter(userAdapter);
+            userAdapter.notifyDataSetChanged();
+            //mSwipeRefreshLayout.setRefreshing(false);
+
+        } else {
+            Log.d(TAG, "recList is NULL");
+        }
+    }
+
+    public static Comparator<UserCardInfo> compDistance()
+    {
+        Comparator comp = new Comparator<UserCardInfo>(){
+            @Override
+            public int compare(UserCardInfo u1, UserCardInfo u2)
+            {
+                return Double.compare(Double.parseDouble(u1.distance), Double.parseDouble(u2.distance));
+            }
+        };
+        return comp;
+    }
+
+    private String getDistance( double lat, double lon ){
+
+        Location userLocation = new Location("User location");
+        userLocation.setLatitude(lat);
+        userLocation.setLongitude(lon);
+
+        DecimalFormat df = new DecimalFormat("0.00");
+        String distance = df.format(mCurrentLocation.distanceTo(userLocation));
+
+        return distance;
+    }
+
+    //Log out user form facebook, delete user data from API and remove user profile pic
+    private void logOut(){
+        //Delete user data from api
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.delete(locatorApi + mongoID, new AsyncHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {}
+            @Override
+            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable
+                    error) {
+                error.printStackTrace(System.out);
+            }
+        });
+        //Remove user profile pic
+        profilePictureView.setProfileId("");
+        //Logout user
+        LoginManager.getInstance().logOut();
     }
 
 
