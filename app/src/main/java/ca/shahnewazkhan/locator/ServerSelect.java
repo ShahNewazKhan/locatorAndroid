@@ -1,38 +1,57 @@
 package ca.shahnewazkhan.locator;
 
-import android.support.v7.app.ActionBarActivity;
+
+import android.graphics.PorterDuff;
 import android.os.Bundle;
-import android.view.Menu;
-import android.view.MenuItem;
+import android.support.design.widget.Snackbar;
+import android.support.v7.app.AppCompatActivity;
+import android.view.View;
+import android.widget.EditText;
+
+import com.loopj.android.http.AsyncHttpClient;
+import com.loopj.android.http.AsyncHttpResponseHandler;
+
+import org.apache.http.Header;
+import org.json.JSONArray;
 
 
-public class ServerSelect extends ActionBarActivity {
+public class ServerSelect extends AppCompatActivity {
 
+    EditText et_serverUrl;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_server_select);
+
+        et_serverUrl = (EditText) findViewById(R.id.et_server);
+        et_serverUrl.getBackground().setColorFilter(getResources()
+                .getColor(R.color.wallet_highlighted_text_holo_dark), PorterDuff.Mode.SRC_ATOP);
     }
 
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_server_select, menu);
-        return true;
-    }
+    public void testServerUrl(final View v){
 
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
+        String url = et_serverUrl.getText().toString();
 
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings) {
-            return true;
+        if( url != null && !url.isEmpty()){
+
+            AsyncHttpClient client = new AsyncHttpClient();
+            client.get(url, new AsyncHttpResponseHandler() {
+
+
+                @Override
+                public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                    Snackbar.make(v, "Ping succeeded", Snackbar.LENGTH_SHORT).show();
+                }
+
+                @Override
+                public void onFailure(int sc, Header[] h, byte[] errorRes, Throwable e) {
+                    Snackbar.make(v, "Ping failed", Snackbar.LENGTH_SHORT).show();
+                }
+            });
+        }else{
+            Snackbar.make(v, "Please enter a url", Snackbar.LENGTH_SHORT).show();
         }
 
-        return super.onOptionsItemSelected(item);
     }
+
 }
