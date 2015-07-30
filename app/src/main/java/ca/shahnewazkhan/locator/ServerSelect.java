@@ -1,6 +1,7 @@
 package ca.shahnewazkhan.locator;
 
 
+import android.content.Intent;
 import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.support.design.widget.Snackbar;
@@ -30,28 +31,39 @@ public class ServerSelect extends AppCompatActivity {
 
     public void testServerUrl(final View v){
 
-        String url = et_serverUrl.getText().toString();
+        String url = et_serverUrl.getText().toString() + "/api/users";
 
         if( url != null && !url.isEmpty()){
-
-            AsyncHttpClient client = new AsyncHttpClient();
-            client.get(url, new AsyncHttpResponseHandler() {
-
-
-                @Override
-                public void onSuccess(int statusCode, Header[] headers, byte[] response) {
-                    Snackbar.make(v, "Ping succeeded", Snackbar.LENGTH_SHORT).show();
-                }
-
-                @Override
-                public void onFailure(int sc, Header[] h, byte[] errorRes, Throwable e) {
-                    Snackbar.make(v, "Ping failed", Snackbar.LENGTH_SHORT).show();
-                }
-            });
+            testUrl(url,v);
         }else{
             Snackbar.make(v, "Please enter a url", Snackbar.LENGTH_SHORT).show();
         }
 
+    }
+
+    private void testUrl(String url, final View v){
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.get(url, new AsyncHttpResponseHandler() {
+
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] response) {
+                Snackbar.make(v, "Ping succeeded", Snackbar.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onFailure(int sc, Header[] h, byte[] errorRes, Throwable e) {
+                Snackbar.make(v, "Ping failed", Snackbar.LENGTH_SHORT).show();
+            }
+        });
+    }
+
+    public void submitServerUrl(View v){
+
+        String url = et_serverUrl.getText().toString();
+
+        Intent mainActivity = new Intent(this, MainActivity.class);
+        mainActivity.putExtra("url", url);
+        startActivity(mainActivity);
     }
 
 }

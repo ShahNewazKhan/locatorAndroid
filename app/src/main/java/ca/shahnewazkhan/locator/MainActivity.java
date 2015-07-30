@@ -4,10 +4,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.location.Location;
 import android.os.Bundle;
+import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
+import android.view.View;
+import android.widget.Button;
 import android.widget.Toast;
 
 import com.facebook.AccessToken;
@@ -109,6 +112,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         };
 
+        Intent intent = getIntent();
+        String url = intent.getExtras().getString("url");
+
+        if( !url.equals("pass") ){
+            locatorApi = url + "/api/users/" ;
+            Toast.makeText(context, "Updated: " + locatorApi, Toast.LENGTH_SHORT ).show();
+        }
+
         updateValuesFromBundle(savedInstanceState);
         buildGoogleApiClient();
 
@@ -209,8 +220,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        Toast.makeText(this, "Location Updated",
-                Toast.LENGTH_SHORT).show();
+        /*Toast.makeText(this, "Location Updated",
+                Toast.LENGTH_SHORT).show();*/
     }
 
     @Override
@@ -264,7 +275,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     //Post user data (fb id, name & location) to api
     private void postNewUser(RequestParams params){
-        LocatorRestClient.post("", params, new JsonHttpResponseHandler() {
+        LocatorRestClient.post(locatorApi, params, new JsonHttpResponseHandler() {
             @Override
             public void onSuccess(int statusCode, Header[] headers, JSONObject response) {
                 //Get mongo id from response
