@@ -46,13 +46,8 @@ import java.util.Date;
 import java.util.List;
 
 
-public class MainActivity
-        extends
-        AppCompatActivity
-        implements
-        GoogleApiClient.ConnectionCallbacks,
-        GoogleApiClient.OnConnectionFailedListener,
-        LocationListener {
+public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, LocationListener {
 
     private static final String TAG = "LOCATOR-APP";
 
@@ -191,9 +186,7 @@ public class MainActivity
     @Override
     protected void onStop() {
         mGoogleApiClient.disconnect();
-
         logOut();
-
         super.onStop();
     }
 
