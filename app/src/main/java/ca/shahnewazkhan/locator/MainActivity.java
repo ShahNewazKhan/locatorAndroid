@@ -220,8 +220,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void onLocationChanged(Location location) {
         mCurrentLocation = location;
         mLastUpdateTime = DateFormat.getTimeInstance().format(new Date());
-        /*Toast.makeText(this, "Location Updated",
-                Toast.LENGTH_SHORT).show();*/
+        Toast.makeText(this, "Location Updated",
+                Toast.LENGTH_SHORT).show();
+
+        if(profile != null){
+            deleteUserFromApi(true);
+        }
     }
 
     @Override
@@ -251,27 +255,31 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             profile = Profile.getCurrentProfile();
 
             if(profile != null){
-
-                profilePictureView.setProfileId(profile.getId());
-
-                //Prepare params for api post call
-                RequestParams params = new RequestParams();
-                params.put("name", profile.getName());
-                params.put("fb_id", profile.getId());
-                params.put("lat", mCurrentLocation.getLatitude());
-                params.put("lon", mCurrentLocation.getLongitude());
-
-                //Post to api
-                postNewUser(params);
-
-                //Populate user cards
-                populateCards();
-
+               preparePostUser();
             }
         }
         @Override public void onCancel() {}
         @Override public void onError(FacebookException e) {}
     };
+
+    private void preparePostUser(){
+
+        //Set fb profile picture
+        profilePictureView.setProfileId(profile.getId());
+
+        //Prepare params for api post call
+        RequestParams params = new RequestParams();
+        params.put("name", profile.getName());
+        params.put("fb_id", profile.getId());
+        params.put("lat", mCurrentLocation.getLatitude());
+        params.put("lon", mCurrentLocation.getLongitude());
+
+        //Post to api
+        postNewUser(params);
+
+        //Populate user cards
+        populateCards();
+    }
 
     //Post user data (fb id, name & location) to api
     private void postNewUser(RequestParams params){
@@ -379,17 +387,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     //Log out user form facebook, delete user data from API and remove user profile pic
     private void logOut(){
-        //Delete user data from api
-        AsyncHttpClient client = new AsyncHttpClient();
-        client.delete(locatorApi + mongoID, new AsyncHttpResponseHandler() {
-            @Override
-            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {}
-            @Override
-            public void onFailure(int statusCode, Header[] headers, byte[] responseBody, Throwable
-                    error) {
-                error.printStackTrace(System.out);
-            }
-        });
+
+        //Remove user from api
+        deleteUserFromApi(false);
+
         //Remove user profile pic
         profilePictureView.setProfileId("");
 
@@ -404,6 +405,28 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
         //Logout user
         LoginManager.getInstance().logOut();
+
+        profile = null;
+    }
+
+    private void deleteUserFromApi(final boolean postUser){
+        //Delete user data from api
+        AsyncHttpClient client = new AsyncHttpClient();
+        client.delete(locatorApi + mongoID, new AsyncHttpResponseHandler() {
+            @Override
+            public void onSuccess(int statusCode, Header[] headers, byte[] responseBody) {
+
+                if(postUser){
+                    preparePostUser();
+                }
+            }
+            @Override
+            public void onFailure(int statusCode, Header[] headers, byte[] responseBody,
+                                  Throwable error) {
+                error.printStackTrace(System.out);
+            }
+        });
+
     }
 
 
